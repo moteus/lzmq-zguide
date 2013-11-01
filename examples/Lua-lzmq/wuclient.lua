@@ -1,0 +1,24 @@
+require "zhelpers"
+local zmq = require "lzmq"
+
+local filter = arg[1] or "10001"
+
+local context = zmq.context()
+local subscriber, err = context:socket(zmq.SUB, {
+  subscribe = filter .. " ";
+  connect   = "tcp://localhost:5556";
+})
+zassert(subscriber, err)
+
+local update_nbr, total_temp = 100, 0
+for i = 1, update_nbr do
+  local message = subscriber:recv()
+  local zipcode, temperature, relhumidity =
+    string.match(message, "([%d]*)%s+([-]?[%d-]*)%s+([-]?[%d-]*)")
+  assert(zipcode == filter)
+  total_temp = total_temp + tonumber(temperature)
+end
+
+printf ("Average temperature for zipcode '%s' was %dF\n",
+  filter, (total_temp / update_nbr))
+
