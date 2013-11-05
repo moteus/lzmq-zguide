@@ -36,7 +36,7 @@ function getchar()
   io.read(1)
 end
 
-function s_dump(socket)
+function s_dump_str(str)
   --  Dump the message as text or binary
   local function is_text(data)
     for i=1, #data do
@@ -48,19 +48,43 @@ function s_dump(socket)
     return true
   end
 
+  local result = sprintf("[%03d] ", #str)
+
+  if is_text(str) then
+    result = result .. str
+  else
+    for i=1, #str do
+      result = result .. sprintf("%02X", str:byte(i))
+    end
+  end
+
+  return result
+end
+
+function s_dump_msg(msg)
   print("----------------------------------------")
   --  Process all parts of the message
-  local msg = socket:recv_all()
   for _, data in ipairs(msg) do
-    printf("[%03d] ", #data)
-    if is_text(data) then
-      io.write(data)
-    else
-      for i=1, #data do
-        printf("%02X", data:byte(i))
-      end
-    end
-    printf("\n")
+    print(s_dump_str(data))
   end
+end
+
+function s_dump(socket)
+  local msg = socket:recv_all()
+  s_dump_msg(msg)
+end
+
+function s_unwrap(msg)
+  local frame = table.remove(msg, 1)
+  if msg[1] and (#msg[1]==0) then
+    table.remove(msg, 1)
+  end
+  return frame
+end
+
+function s_wrap(msg, frame)
+  table.insert(msg, 1, "")
+  table.insert(msg, 1, frame)
+  return msg
 end
 
