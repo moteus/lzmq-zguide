@@ -1,8 +1,10 @@
+-- Hello World server
+
 require "zhelpers"
 local zmq = require "lzmq"
 
 local context = zmq.context()
-local responder, err = context:socket(zmq.REP, { bind = "tcp://*:5556" })
+local responder, err = context:socket{zmq.REP, bind = "tcp://*:5556"}
 responder:bind("ipc://weather.ipc")
 zassert(responder, err)
 while true do

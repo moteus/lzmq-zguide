@@ -1,14 +1,17 @@
+-- Multithreaded Hello World server
+
 require "zhelpers"
-local zmq = require "lzmq"
+local zmq      = require "lzmq"
 local zthreads = require "lzmq.threads"
 
 local worker_routine = [[
   require "zhelpers"
-  local zmq = require "lzmq"
+  local zmq      = require "lzmq"
   local zthreads = require "lzmq.threads"
   local context = zthreads.get_parent_ctx()
 
-  local receiver, err = context:socket(zmq.REP,{connect = "inproc://workers"})
+  -- Socket to talk to dispatcher
+  local receiver, err = context:socket{zmq.REP, connect = "inproc://workers"}
   zassert(receiver, err)
   while true do
     local message = receiver:recv()
@@ -25,11 +28,11 @@ local worker_routine = [[
 local context = zmq.context()
 
 -- Socket to talk to clients
-local clients, err = context:socket(zmq.ROUTER, {bind = "tcp://*:5555"})
+local clients, err = context:socket{zmq.ROUTER, bind = "tcp://*:5555"}
 zassert(clients, err)
 
--- Socket to talk to clients
-local workers, err = context:socket(zmq.DEALER, {bind = "inproc://workers"})
+-- Socket to talk to workers
+local workers, err = context:socket{zmq.DEALER, bind = "inproc://workers"}
 zassert(workers, err)
 
 -- Launch pool of worker threads

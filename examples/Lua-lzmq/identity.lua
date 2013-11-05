@@ -4,11 +4,11 @@ local zmq = require "lzmq"
 -- Prepare our context and publisher
 local context = zmq.context()
 
-local sink, err = context:socket(zmq.ROUTER,{ bind = "inproc://example" })
+local sink, err = context:socket{zmq.ROUTER, bind = "inproc://example"}
 zassert(sink, err)
 
 -- First allow 0MQ to set the identity
-local anonymous, err = context:socket(zmq.REQ, {connect = "inproc://example"})
+local anonymous, err = context:socket{zmq.REQ, connect = "inproc://example"}
 zassert(anonymous, err)
 anonymous:send("ROUTER uses a generated UUID")
 

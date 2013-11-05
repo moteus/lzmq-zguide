@@ -1,3 +1,5 @@
+-- ROUTER-to-REQ example
+
 require "zhelpers"
 local zmq      = require "lzmq"
 local zthreads = require "lzmq.threads"
@@ -15,7 +17,7 @@ local worker_routine = [[
 
   local context = zmq.context()
 
-  local worker, err = context:socket(zmq.REQ,{connect = "tcp://localhost:5671"})
+  local worker, err = context:socket{zmq.REQ, connect = "tcp://localhost:5671"}
   zassert(worker, err)
 
   math.randomseed(worker:fd())
@@ -40,7 +42,7 @@ local worker_routine = [[
 
 local context = zmq.context()
 
-local broker, err = context:socket(zmq.ROUTER, {bind = "tcp://*:5671"})
+local broker, err = context:socket{zmq.ROUTER, bind = "tcp://*:5671"}
 zassert(broker, err)
 
 sleep(1)

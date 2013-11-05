@@ -1,3 +1,9 @@
+-- Asynchronous client-to-server (DEALER to ROUTER)
+--
+-- While this example runs in a single process, that is to make
+-- it easier to start and stop the example. Each task has its own
+-- context and conceptually acts as a separate process.
+
 require "zhelpers"
 local zmq      = require "lzmq"
 local zthreads = require "lzmq.threads"
@@ -25,7 +31,7 @@ local init_thread = include .. [[
 -- It collects responses as they arrive, and it prints them out. We will
 -- run several client tasks in parallel, each with a different random ID.
 local client_task = init_task .. [[
-  local client, err = ctx:socket(zmq.DEALER, {connect = "tcp://localhost:5570"})
+  local client, err = ctx:socket{zmq.DEALER, connect = "tcp://localhost:5570"}
   zassert(client, err)
   local timer = ztimer.monotonic(1000)
   local poller = zpoller.new(1)
@@ -39,7 +45,7 @@ local client_task = init_task .. [[
   while true do
     timer:start()
     while timer:rest() > 0 do
-      poller:poll(10)
+      poller:poll(timer:rest())
     end
     request_nbr = request_nbr + 1
     local msg = string.format("request #%d", request_nbr)
@@ -50,15 +56,14 @@ local client_task = init_task .. [[
 -- Each worker task works on one request at a time and sends a random number
 -- of replies back, with random delays between replies:
 local server_worker = init_thread .. [[
-  local worker, err = ctx:socket(zmq.DEALER, {connect = "inproc://backend"})
+  local worker, err = ctx:socket{zmq.DEALER, connect = "inproc://backend"}
   zassert(worker, err)
 
   math.randomseed(worker:fd())
 
   while true do
     -- The DEALER socket gives us the reply envelope and message
-    local msg = worker:recv_all()
-    local identity, content = msg[1], msg[2]
+    local identity, content = worker:recvx()
     assert(identity and content)
 
     -- Send 0..4 replies back
@@ -66,7 +71,7 @@ local server_worker = init_thread .. [[
     for reply = 1, replies do
       -- Sleep for some fraction of a second
       ztimer.sleep(randof(1000) + 1)
-      worker:send_all{identity, content}
+      worker:sendx(identity, content)
     end
   end
 ]]
@@ -78,11 +83,11 @@ local server_worker = init_thread .. [[
 -- once.
 local server_task = init_task .. [[
   -- Frontend socket talks to clients over TCP
-  local frontend, err = ctx:socket(zmq.ROUTER,{bind = "tcp://*:5570"})
+  local frontend, err = ctx:socket{zmq.ROUTER, bind = "tcp://*:5570"}
   zassert(frontend, err)
 
   -- Backend socket talks to workers over inproc
-  local backend, err = ctx:socket(zmq.DEALER,{bind = "inproc://backend"})
+  local backend, err = ctx:socket{zmq.DEALER, bind = "inproc://backend"}
   zassert(backend, err)
 
   -- Launch pool of worker threads, precise number is not critical

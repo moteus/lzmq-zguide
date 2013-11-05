@@ -1,5 +1,8 @@
+-- Reading from multiple sockets
+-- This version uses lzmq.poller
+
 require "zhelpers"
-local zmq = require "lzmq"
+local zmq     = require "lzmq"
 local zpoller = require "lzmq.poller"
 
 local context = zmq.context()

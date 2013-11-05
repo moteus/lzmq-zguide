@@ -1,8 +1,12 @@
+-- Weather update server
+-- Binds PUB socket to tcp://*:5556
+-- Publishes random weather updates
+
 require "zhelpers"
 local zmq = require "lzmq"
 
 local context = zmq.context()
-local publisher, err = context:socket(zmq.PUB,{ bind = "tcp://*:5556" })
+local publisher, err = context:socket{zmq.PUB, bind = "tcp://*:5556"}
 zassert(publisher, err)
 publisher:bind("ipc://weather.ipc")
 

@@ -1,3 +1,6 @@
+-- Load-balancing broker
+-- Clients and workers are shown here in-process
+
 require "zhelpers"
 local zmq      = require "lzmq"
 local zthreads = require "lzmq.threads"
@@ -27,11 +30,9 @@ local init_thread = [[
 ]]
 
 -- Basic request-reply client using REQ socket
--- Because s_send and s_recv can't handle 0MQ binary identities, we
--- set a printable text identity to allow routing.
 --
 local client_task = init_thread .. [[
-  local client, err = context:socket(zmq.REQ, {connect = FRONTEND})
+  local client, err = context:socket{zmq.REQ, connect = FRONTEND}
   zassert(client, err)
   -- Send request, get reply
   client:send("HELLO")
@@ -44,7 +45,7 @@ local client_task = init_thread .. [[
 -- context and conceptually acts as a separate process.
 -- This is the worker task, using a REQ socket to do load-balancing.
 local worker_task = init_thread .. [[
-  local worker, err = context:socket(zmq.REQ,{connect = BACKEND})
+  local worker, err = context:socket{zmq.REQ,connect = BACKEND}
   zassert(worker, err)
 
   -- Tell broker we're ready for work
@@ -53,15 +54,12 @@ local worker_task = init_thread .. [[
   while true do
     -- Read and save all frames until we get an empty frame
     -- In this example there is only 1, but there could be more
-    local identity = worker:recv()
-    local empty    = worker:recv()
+    local identity, empty, request = worker:recvx()
     assert(empty == "")
 
-    -- Get request, send reply
-    local request = worker:recv()
     printf ("Worker: %s\n", request)
 
-    worker:send_all{identity, "", "OK"}
+    worker:sendx(identity, "", "OK")
   end
 ]]
 
@@ -74,9 +72,9 @@ local worker_task = init_thread .. [[
 
 local context = zmq.context()
 
-local frontend, err = context:socket(zmq.ROUTER, {bind = FRONTEND})
+local frontend, err = context:socket{zmq.ROUTER, bind = FRONTEND}
 zassert(frontend, err)
-local backend,  err = context:socket(zmq.ROUTER, {bind = BACKEND})
+local backend,  err = context:socket{zmq.ROUTER, bind = BACKEND}
 zassert(backend, err)
 
 -- Launch pool of client threads
@@ -114,8 +112,7 @@ function frontend_cb()
   assert(msg[2] == "")
 
   local worker_id = tremove(worker_queue, 1)
-  backend:send_more(worker_id)
-  backend:send_more("")
+  backend:sendx_more(worker_id, "")
   backend:send_all(msg)
 end
 

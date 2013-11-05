@@ -1,10 +1,18 @@
+-- Task ventilator
+-- Binds PUSH socket to tcp://localhost:5557
+-- Sends batch of tasks to workers via that socket
+
 require "zhelpers"
 local zmq = require "lzmq"
 
 local context = zmq.context()
-local sender, err = context:socket(zmq.PUSH, { bind = "tcp://*:5557" })
+
+-- Socket to send messages on
+local sender, err = context:socket{zmq.PUSH, bind = "tcp://*:5557"}
 zassert(sender, err)
-local sink, err = context:socket(zmq.PUSH, { connect = "tcp://localhost:5558" })
+
+-- Socket to send start of batch message on
+local sink, err = context:socket{zmq.PUSH, connect = "tcp://localhost:5558"}
 zassert(sink, err)
 
 printf("Press Enter when the workers are ready: ")

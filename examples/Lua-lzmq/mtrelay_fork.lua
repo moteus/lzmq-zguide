@@ -1,5 +1,5 @@
 require "zhelpers"
-local zmq = require "lzmq"
+local zmq      = require "lzmq"
 local zthreads = require "lzmq.threads"
 
 local init_thread = [[

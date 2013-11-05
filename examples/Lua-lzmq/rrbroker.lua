@@ -1,13 +1,16 @@
+-- Simple request-reply broker
+
 require "zhelpers"
-local zmq = require "lzmq"
+local zmq     = require "lzmq"
 local zpoller = require "lzmq.poller"
 
+-- Prepare our context and sockets
 local context = zmq.context()
 
-local frontend, err = context:socket(zmq.ROUTER,{bind = "tcp://*:5559"})
+local frontend, err = context:socket{zmq.ROUTER, bind = "tcp://*:5559"}
 zassert(frontend, err)
 
-local backend, err = context:socket(zmq.DEALER,{bind = "tcp://*:5560"})
+local backend, err = context:socket{zmq.DEALER, bind = "tcp://*:5560"}
 zassert(backend, err)
 
 local poller = zpoller.new(2)

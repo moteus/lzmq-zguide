@@ -1,3 +1,5 @@
+-- Synchronized publisher
+
 require "zhelpers"
 local zmq = require "lzmq"
 
@@ -6,14 +8,14 @@ local SUBSCRIBERS_EXPECTED = 10 -- We wait for 10 subscribers
 local context = zmq.context()
 
 -- Socket to talk to clients
-local publisher, err = context:socket(zmq.PUB, {
+local publisher, err = context:socket{zmq.PUB,
   sndhwm = 1100000;
   bind   = "tcp://*:5561";
-})
+}
 zassert(publisher, err)
 
 -- Socket to receive signals
-local syncservice, err = context:socket(zmq.REP, { bind = "tcp://*:5562" })
+local syncservice, err = context:socket{zmq.REP, bind = "tcp://*:5562"}
 zassert(syncservice, err)
 
 -- Get synchronization from subscribers

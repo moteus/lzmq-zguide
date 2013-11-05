@@ -15,7 +15,7 @@ local worker_routine = [[
 
   local context = zmq.context()
 
-  local worker, err = context:socket(zmq.DEALER,{connect = "tcp://localhost:5671"})
+  local worker, err = context:socket{zmq.DEALER, connect = "tcp://localhost:5671"}
   zassert(worker, err)
 
   math.randomseed(worker:fd())
@@ -42,10 +42,8 @@ local worker_routine = [[
 
 local context = zmq.context()
 
-local broker, err = context:socket(zmq.ROUTER, {bind = "tcp://*:5671"})
+local broker, err = context:socket{zmq.ROUTER, bind = "tcp://*:5671"}
 zassert(broker, err)
-
-sleep(1)
 
 -- Launch pool of worker threads
 for thread_nbr = 1, NBR_WORKERS do

@@ -1,22 +1,25 @@
+-- Task worker - design 2
+-- Adds pub-sub flow to receive and respond to kill signal
+
 require "zhelpers"
-local zmq = require "lzmq"
+local zmq     = require "lzmq"
 local zpoller = require "lzmq.poller"
 
 local context = zmq.context()
 
 -- Socket to receive messages on
-local receiver, err = context:socket(zmq.PULL, { connect = "tcp://localhost:5557" })
+local receiver, err = context:socket{zmq.PULL, connect = "tcp://localhost:5557"}
 zassert(receiver, err)
 
 -- Socket to send messages to
-local sender, err = context:socket(zmq.PUSH, { connect = "tcp://localhost:5558" })
+local sender, err = context:socket{zmq.PUSH, connect = "tcp://localhost:5558"}
 zassert(sender, err)
 
 -- Socket to send messages to
-local controller, err = context:socket(zmq.SUB, {
+local controller, err = context:socket{zmq.SUB,
   subscribe = "";
   connect   = "tcp://localhost:5559"
-})
+}
 zassert(controller, err)
 
 local poller = zpoller.new(2)
