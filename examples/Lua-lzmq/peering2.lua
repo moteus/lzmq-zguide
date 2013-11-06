@@ -77,9 +77,6 @@ local worker_task = init_task .. [[
 -- Other arguments are our peers' names
 local argc = select("#", ...)
 
--- local arg = {"DC1", "DC2"}
--- local argc = #arg
-
 if argc < 2 then
   printf("syntax: peering2 me {you}...\n")
   return 0
@@ -97,20 +94,15 @@ local cloudfe, err = ctx:socket{zmq.ROUTER,
 
 printf("I: My name is '%s'('%s')\n", self, CLOUD(self))
 
--- list of all cloud backend
-local beendpoints = {}
+-- Connect cloud backend to all peers
+local cloudbe, err = ctx:socket{zmq.ROUTER, identity = self}
+zassert(cloudbe, err)
+
 for i = 2, argc do
   local peer = CLOUD(arg[i])
   printf ("I: connecting to cloud frontend at '%s'('%s')\n", arg[i], peer)
-  table.insert(beendpoints, peer)
+  zassert(cloudbe:connect(peer))
 end
-
--- Connect cloud backend to all peers
-local cloudbe, err = ctx:socket{zmq.ROUTER,
-  identity = self;
-  connect = beendpoints;
-}
-zassert(cloudbe, err)
 
 math.randomseed(cloudfe:fd())
 
@@ -136,7 +128,7 @@ for client_nbr = 1, NBR_CLIENTS do
   thread:start(true)
 end
 
-
+-- Least recently used queue of available workers
 local workers = {}
 
 -- loop to proceed client requests
@@ -190,7 +182,6 @@ end
 -- to poll workers at all times, and clients only when there are one
 -- or more workers available.
 
--- Least recently used queue of available workers
 local loopbe = zloop.new(2, ctx)
 
 function proceed_backend(msg)
@@ -199,11 +190,15 @@ function proceed_backend(msg)
     local data = msg[1]
     for argn = 2, argc do
       if data == arg[ argn ] then
-        return cloudfe:send_all( msg )
+        cloudfe:send_all( msg )
+        msg = nil
+        break
       end
     end
-    -- Route reply to client if we still need to
-    localfe:send_all(msg)
+    if msg then
+      -- Route reply to client if we still need to
+      localfe:send_all(msg)
+    end
   end
 
   poll_frontend()

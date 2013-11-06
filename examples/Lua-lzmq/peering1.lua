@@ -25,22 +25,17 @@ local self = STATE(arg[1])
 local statebe, err = ctx:socket{zmq.PUB, bind = self}
 zassert(statebe, err)
 
-math.randomseed(statebe:fd())
+-- Connect statefe to all peers
+local statefe, err = ctx:socket{zmq.SUB, subscribe = ""}
+zassert(statefe, err)
 
--- list of all frontend endpoints
-local feendpoints = {}
 for i = 2, argc do
   local peer = STATE(arg[i])
   printf ("I: connecting to state backend at '%s'('%s')\n", arg[i], peer)
-  table.insert(feendpoints, peer)
+  zassert(statefe:connect(peer))
 end
 
--- Connect statefe to all peers
-local statefe, err = ctx:socket{zmq.SUB,
-  subscribe = "";
-  connect   = feendpoints;
-}
-zassert(statefe, err)
+math.randomseed(statebe:fd())
 
 -- The main loop sends out status messages to peers, and collects
 -- status messages back from peers. The zmq_poll timeout defines

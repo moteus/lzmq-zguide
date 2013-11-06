@@ -15,7 +15,7 @@ zassert(receiver, err)
 local sender, err = context:socket{zmq.PUSH, connect = "tcp://localhost:5558"}
 zassert(sender, err)
 
--- Socket to send messages to
+-- Socket for control input
 local controller, err = context:socket{zmq.SUB,
   subscribe = "";
   connect   = "tcp://localhost:5559"

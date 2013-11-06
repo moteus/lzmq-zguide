@@ -1,5 +1,5 @@
--- Broker peering simulation (part 2)
--- Prototypes the request-reply flow
+-- Broker peering simulation (part 3)
+-- Prototypes the full flow of status and tasks
 
 require "zhelpers"
 require "peercfg"
@@ -45,8 +45,11 @@ local client_task = init_task .. [[
     connect  = LOCALFE(self);
   }
   zassert(client, err)
+
   local monitor, err = ctx:socket{zmq.PUSH, connect = MONITOR(self)}
   zassert(monitor, err)
+
+  math.randomseed(client:fd())
 
   sleep (1) -- wait all brokers bind
   while true do
@@ -78,6 +81,9 @@ local client_task = init_task .. [[
 local worker_task = init_task .. [[
   local self = ...
   local worker, err = ctx:socket{zmq.REQ, connect=LOCALBE(self)}
+  zassert(worker, err)
+
+  math.randomseed(worker:fd())
 
   -- Tell broker we're ready for work
   worker:send(WORKER_READY)
@@ -93,8 +99,6 @@ local worker_task = init_task .. [[
 ]]
 
 
-
-
 -- The main task begins by setting up all its sockets. The local frontend
 -- talks to clients, and our local backend talks to workers. The cloud
 -- frontend talks to peer brokers as if they were clients, and the cloud
@@ -104,13 +108,9 @@ local worker_task = init_task .. [[
 -- we use a PULL monitor socket to collect printable messages from tasks:
 
 
-
 -- First argument is this broker's name
 -- Other arguments are our peers' names
 local argc = select("#", ...)
-
--- local arg = {"DC1", "DC2"}
--- local argc = #arg
 
 if argc < 2 then
   printf("syntax: peering3 me {you}...\n")
@@ -122,7 +122,6 @@ local ctx = zmq.context()
 local self = arg[1]
 
 printf ("I: preparing broker at %s ...\n", self);
-
 
 -- Prepare local frontend and backend
 local localfe, err = ctx:socket{zmq.ROUTER, bind = LOCALFE(self)}
@@ -137,39 +136,29 @@ local cloudfe, err = ctx:socket{zmq.ROUTER,
   bind = CLOUD(self);
 }
 
--- list of all cloud backend
-local beendpoints = {}
+-- Connect cloud backend to all peers
+local cloudbe, err = ctx:socket{zmq.ROUTER, identity = self}
+zassert(cloudbe, err)
+
 for i = 2, argc do
   local peer = CLOUD(arg[i])
   printf ("I: connecting to cloud frontend at '%s'('%s')\n", arg[i], peer)
-  table.insert(beendpoints, peer)
+  zassert(cloudbe:connect(peer))
 end
-
--- Connect cloud backend to all peers
-local cloudbe, err = ctx:socket{zmq.ROUTER,
-  identity = self;
-  connect = beendpoints;
-}
-zassert(cloudbe, err)
 
 -- Bind state backend to endpoint
 local statebe, err = ctx:socket{zmq.PUB, bind = STATE(self)}
 zassert(statebe, err)
 
--- list of all frontend endpoints
-local feendpoints = {}
+-- Connect statefe to all peers
+local statefe, err = ctx:socket{zmq.SUB, subscribe = ""}
+zassert(statefe, err)
+
 for i = 2, argc do
   local peer = STATE(arg[i])
   printf ("I: connecting to state backend at '%s'('%s')\n", arg[i], peer)
-  table.insert(feendpoints, peer)
+  zassert(statefe:connect(peer))
 end
-
--- Connect statefe to all peers
-local statefe, err = ctx:socket{zmq.SUB,
-  subscribe = "";
-  connect   = feendpoints;
-}
-zassert(statefe, err)
 
 -- Prepare monitor socket
 local monitor, err = ctx:socket{zmq.PULL, bind = MONITOR(self)}
@@ -192,6 +181,7 @@ for client_nbr = 1, NBR_CLIENTS do
   thread:start(true)
 end
 
+-- Least recently used queue of available workers
 local workers = {}
 local cloud_capacity = 0
 local previous = 0
@@ -261,7 +251,6 @@ end
 -- to poll workers at all times, and clients only when there are one
 -- or more workers available.
 
--- Least recently used queue of available workers
 local loopbe = zloop.new(2, ctx)
 
 function proceed_backend(msg)
@@ -270,11 +259,15 @@ function proceed_backend(msg)
     local data = msg[1]
     for argn = 2, argc do
       if data == arg[ argn ] then
-        return cloudfe:send_all( msg )
+        cloudfe:send_all( msg )
+        msg = nil
+        break
       end
     end
-    -- Route reply to client if we still need to
-    localfe:send_all(msg)
+    if msg then
+      -- Route reply to client if we still need to
+      localfe:send_all(msg)
+    end
   end
 
   poll_frontend()
