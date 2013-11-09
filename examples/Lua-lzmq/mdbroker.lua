@@ -301,15 +301,15 @@ function Broker:on_worker(sender, msg)
       return worker:destroy(true)
     end
 
+    local service_name = pop_front(msg)
+
     -- Reserved service name
-    if sender:sub(1, 4) == "mmi." then
+    if service_name:sub(1, 4) == "mmi." then
       return worker:destroy(true)
     end
 
     -- Attach worker to service and mark as idle
-    local service_frame = pop_front(msg)
-    assert(service_frame)
-    local service = self:service(service_frame)
+    local service = self:service(service_name)
     return service:add_worker(worker)
   end
 
