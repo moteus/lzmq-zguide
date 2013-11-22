@@ -1,5 +1,11 @@
 -- mdcliapi class - Majordomo Protocol Client API
 -- Implements the MDP/Worker spec at http://rfc.zeromq.org/spec:7.
+----------------------------------------------------------------------------
+
+-- usage
+-- local cli = mdcli:new("tcp://127.0.0.1:5555")
+-- local msg = cli:send("ECHO", "HELLO")
+----------------------------------------------------------------------------
 
 local mdp    = require "mdp"
 local utils  = require "mdutils"
@@ -158,9 +164,6 @@ function mdcli:retries()
 end
 
 end
-
-local cli = mdcli:new("tcp://127.0.0.1:5555")
-local msg = cli:send("ECHO", "HELLO")
 
 return {
   new = function(...) return mdcli:new(...) end

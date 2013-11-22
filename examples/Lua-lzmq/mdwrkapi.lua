@@ -1,5 +1,11 @@
 -- mdwrkapi class - Majordomo Protocol Worker API
 -- Implements the MDP/Worker spec at http://rfc.zeromq.org/spec:7.
+----------------------------------------------------------------------------
+
+-- usage
+-- local echo = mdwrk:new("tcp://127.0.0.1:5555", "ECHO", true)
+-- local msg while true do msg = echo:recv(msg) end
+----------------------------------------------------------------------------
 
 local mdp    = require "mdp"
 local utils  = require "mdutils"
@@ -207,13 +213,6 @@ function mdwrk:recv(reply)
   end
 end
 
-end
-
-worker = mdwrk:new("tcp://127.0.0.1:5555", "ECHO", true)
-
-local msg
-while true do
-  msg = assert(worker:recv(msg))
 end
 
 return {

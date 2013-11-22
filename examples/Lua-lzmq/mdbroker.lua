@@ -4,10 +4,14 @@
 
 ----------------------------------------------------------------------------
 
+-- usage
+-- local SERVER_ENDPOINT    = "tcp://*:5555"
+-- Broker:new(SERVER_ENDPOINT, true):start()
+----------------------------------------------------------------------------
+
 local HEARTBEAT_LIVENESS = 3    -- 3-5 is reasonable
 local HEARTBEAT_INTERVAL = 2500 -- msecs
 local HEARTBEAT_EXPIRY   = HEARTBEAT_INTERVAL * HEARTBEAT_LIVENESS
-local SERVER_ENDPOINT    = "tcp://*:5555"
 
 ----------------------------------------------------------------------------
 
@@ -375,5 +379,3 @@ function Broker:start()
 end
 
 end
-
-Broker:new(SERVER_ENDPOINT, true):start()
