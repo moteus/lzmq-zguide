@@ -18,7 +18,8 @@ local zassert, unpack = zmq.assert, unpack or table.unpack
 local MDPW_REPLY, MDPW_WORKER, MDPW_READY, MDPW_HEARTBEAT, MDPW_REQUEST, MDPW_DISCONNECT = 
   mdp.MDPW_REPLY, mdp.MDPW_WORKER, mdp.MDPW_READY, mdp.MDPW_HEARTBEAT, mdp.MDPW_REQUEST, mdp.MDPW_DISCONNECT
 
-local printf, dump_msg = utils.printf, utils.dump_msg
+local pop_front, zmsg_unwrap, printf, dump_msg = 
+  utils.pop_front, utils.zmsg_unwrap, utils.printf, utils.dump_msg
 
 local READY_MSG      = {"", MDPW_WORKER, MDPW_READY, "SERVICE"    }
 local REPLY_MSG      = {"", MDPW_WORKER, MDPW_REPLY, "", ""       }
@@ -140,7 +141,7 @@ function mdwrk:recv(reply)
   local heartbeat_at = self._private.heartbeat_at
 
   if reply then
-    assert(self._private.reply_to)
+    assert(type(self._private.reply_to) == "string")
 
     REPLY_MSG[#REPLY_MSG - 1] = self._private.reply_to
     worker:send_all(REPLY_MSG, zmq.SNDMORE)
@@ -175,18 +176,17 @@ function mdwrk:recv(reply)
       -- Don't try to handle errors, just assert noisily
       assert(#msg >= 3)
 
-      local empty = table.remove(msg, 1)
+      local empty = pop_front(msg)
       assert(empty == "")
 
-      local header = table.remove(msg, 1)
+      local header = pop_front(msg)
       assert(header == MDPW_WORKER)
 
-      local command = table.remove(msg, 1)
+      local command = pop_front(msg)
       if command == MDPW_REQUEST then
         -- We should pop and save as many addresses as there are
         -- up to a null part, but for now, just save one…
-        self._private.reply_to = table.remove(msg, 1)
-        if msg[1] == "" then table.remove(msg, 1) end
+        self._private.reply_to = zmsg_unwrap(msg)
 
         -- Here is where we actually have a message to process; we
         -- return it to the caller application:

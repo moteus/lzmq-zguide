@@ -17,7 +17,8 @@ local MDPC_CLIENT = mdp.MDPC_CLIENT
 
 local zassert = zmq.assert
 
-local push_front, printf, dump_msg = utils.push_front, utils.printf, utils.dump_msg
+local push_front, pop_front, printf, dump_msg = 
+  utils.push_front, utils.pop_front, utils.printf, utils.dump_msg
 
 local function connect_to_broker(self)
   if self._private.client then
@@ -107,10 +108,10 @@ function mdcli:send(service, request)
       -- We would handle malformed replies better in real code
       assert(#reply >= 3)
 
-      local header = table.remove(reply, 1)
+      local header = pop_front(reply)
       assert(header == MDPC_CLIENT)
 
-      local reply_service = table.remove(reply, 1)
+      local reply_service = pop_front(reply, 1)
       assert(reply_service == service)
 
       return reply -- Success

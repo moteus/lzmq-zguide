@@ -297,7 +297,6 @@ function Broker:on_worker(sender, msg)
   assert(#msg >= 1) -- At least, command
 
   local worker, new = self:worker(sender)
-  local worker_ready = not new
   local command = pop_front(msg)
 
   if command == MDPW_READY then
@@ -305,15 +304,16 @@ function Broker:on_worker(sender, msg)
       return worker:destroy(true)
     end
 
+    local service_name = pop_front(msg)
+    assert(service_name)
+
     -- Reserved service name
-    if sender:sub(1, 4) == "mmi." then
+    if service_name:sub(1, 4) == "mmi." then
       return worker:destroy(true)
     end
 
     -- Attach worker to service and mark as idle
-    local service_frame = pop_front(msg)
-    assert(service_frame)
-    local service = self:service(service_frame)
+    local service = self:service(service_name)
     return service:add_worker(worker)
   end
 
@@ -333,7 +333,7 @@ function Broker:on_worker(sender, msg)
   end
 
   if command == MDPW_HEARTBEAT then
-    if new then -- first message coul not be HB
+    if new then -- first message could not be HB
       return worker:destroy(true)
     end
 
